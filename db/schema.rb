@@ -10,16 +10,16 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_25_163225) do
+ActiveRecord::Schema[8.1].define(version: 2026_01_26_102828) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
   create_table "study_logs", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.integer "duration"
     t.datetime "ended_at"
     t.datetime "started_at"
     t.bigint "task_id", null: false
-    t.integer "total_time"
     t.datetime "updated_at", null: false
     t.index ["task_id"], name: "index_study_logs_on_task_id"
   end

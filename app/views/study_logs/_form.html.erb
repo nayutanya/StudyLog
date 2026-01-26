@@ -1,0 +1,198 @@
+<%= form_with(model: study_log) do |form| %>
+  <% if study_log.errors.any? %>
+    <div style="color: red; padding: 10px; border: 1px solid red; margin-bottom: 20px;">
+      <h2>保存できませんでした：</h2>
+      <ul><% study_log.errors.full_messages.each do |msg| %><li><%= msg %></li><% end %></ul>
+    </div>
+  <% end %>
+
+  <div style="margin-bottom: 20px;">
+    <label style="font-weight: bold;">勉強科目</label>
+    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+      <%= form.collection_select :task_id, Task.all, :id, :title, { prompt: "科目を選択" }, { id: "task-select", style: "flex: 1; padding: 10px;" } %>
+    </div>
+    <div style="background: #f0f0f0; padding: 10px; border-radius: 5px; display: flex; gap: 5px;">
+      <input type="text" id="new-task-name" placeholder="新しい科目名" style="flex: 1; padding: 5px;">
+      <button type="button" id="add-task-btn" style="background: #6c757d; color: white; border: none; padding: 5px 10px; border-radius: 3px;">追加</button>
+      <button type="button" id="delete-task-btn" style="background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px;">削除</button>
+    </div>
+  </div>
+
+  <div style="text-align: center; padding: 20px; border: 2px solid #ccc; border-radius: 10px; background: #f9f9f9; margin-bottom: 20px;">
+    <div id="study-mode-setup" style="margin-bottom: 10px;">
+      <label><input type="radio" name="mode" value="up" checked onclick="switchStudyMode('up')"> カウントアップ</label>
+      <label><input type="radio" name="mode" value="down" onclick="switchStudyMode('down')"> カウントダウン</label>
+      <div id="study-target-input" style="display: none; margin-top: 10px;">
+        目標：<input type="number" id="target-minutes" value="25" style="width: 50px;"> 分
+      </div>
+    </div>
+
+    <div id="timer-display" style="font-size: 48px; font-family: monospace;">00:00:00</div>
+    <div style="color: #666; margin-bottom: 15px;">今日の合計：<span id="total-display">00:00:00</span></div>
+
+    <button type="button" id="start-btn" style="background: #28a745; color: white; padding: 10px 20px; border-radius: 5px;">開始</button>
+    <button type="button" id="pause-btn" style="background: #ffc107; color: black; padding: 10px 20px; border-radius: 5px; display: none;">一時停止</button>
+    <button type="button" id="stop-btn" style="background: #dc3545; color: white; padding: 10px 20px; border-radius: 5px;" disabled>終了</button>
+
+    <div id="break-area" style="margin-top: 15px; background: #fff3cd; padding: 15px; border-radius: 5px;">
+      <b>休憩タイマー</b><br>
+      <div id="break-setup">
+        <input type="number" id="break-minutes-input" value="5" style="width: 50px;"> 分
+        <button type="button" id="confirm-break-btn" style="background: #ffc107; padding: 5px 10px; border-radius: 3px;">Start</button>
+      </div>
+      <button type="button" id="stop-break-btn" style="display: none; background: #6c757d; color: white; padding: 5px 10px;">Stop</button>
+    </div>
+  </div>
+
+  <%= form.hidden_field :duration, id: "study_log_duration" %>
+<% end %>
+
+<script>
+document.addEventListener("turbo:load", () => {
+  let timerInterval;
+  let currentStudyMode = 'up';
+  let sessionSeconds = 0; 
+  let totalAccumulatedSeconds = 0; 
+  let isPaused = false;
+
+  const display = document.getElementById('timer-display');
+  const totalDisplay = document.getElementById('total-display');
+  const startBtn = document.getElementById('start-btn');
+  const pauseBtn = document.getElementById('pause-btn');
+  const stopBtn = document.getElementById('stop-btn');
+  const durationField = document.getElementById('study_log_duration');
+  const taskSelect = document.getElementById('task-select');
+
+  // --- タイマー更新関数 ---
+  function updateDisplay(element, seconds) {
+    const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    element.textContent = `${h}:${m}:${s}`;
+  }
+
+  window.switchStudyMode = (mode) => {
+    currentStudyMode = mode;
+    document.getElementById('study-target-input').style.display = (mode === 'down') ? 'block' : 'none';
+    const targetMin = document.getElementById('target-minutes').value;
+    display.textContent = (mode === 'down') ? `${targetMin.padStart(2, '0')}:00:00` : "00:00:00";
+  };
+
+  function startTicking() {
+    timerInterval = setInterval(() => {
+      sessionSeconds++;
+      totalAccumulatedSeconds++;
+      let displaySec = (currentStudyMode === 'up') ? sessionSeconds : (parseInt(document.getElementById('target-minutes').value) * 60 - sessionSeconds);
+      if (displaySec < 0) displaySec = 0;
+      updateDisplay(display, displaySec);
+      updateDisplay(totalDisplay, totalAccumulatedSeconds);
+      durationField.value = totalAccumulatedSeconds;
+    }, 1000);
+  }
+
+  // --- ボタン操作 ---
+  startBtn.addEventListener('click', () => {
+    startBtn.style.display = 'none';
+    pauseBtn.style.display = 'inline-block';
+    stopBtn.disabled = false;
+    isPaused = false;
+    startTicking();
+  });
+
+  pauseBtn.addEventListener('click', () => {
+    if (!isPaused) {
+      clearInterval(timerInterval);
+      pauseBtn.textContent = "再開";
+      pauseBtn.style.background = "#28a745";
+      pauseBtn.style.color = "white";
+      isPaused = true;
+    } else {
+      startTicking();
+      pauseBtn.textContent = "一時停止";
+      pauseBtn.style.background = "#ffc107";
+      pauseBtn.style.color = "black";
+      isPaused = false;
+    }
+  });
+
+  stopBtn.addEventListener('click', async () => {
+    clearInterval(timerInterval);
+    const taskId = taskSelect.value;
+    const duration = parseInt(durationField.value) || 0;
+
+    if (!taskId) {
+      alert("科目を選択してから『終了』を押してください。");
+      return;
+    }
+
+    const response = await fetch('/study_logs.json', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ study_log: { task_id: taskId, duration: duration } })
+    });
+
+    if (response.ok) {
+      alert("勉強終了！自動保存しました。");
+      window.location.reload(); 
+    } else {
+      alert("保存に失敗しました。");
+    }
+  });
+
+  // --- 科目管理 ---
+  document.getElementById('add-task-btn').addEventListener('click', async () => {
+    const taskName = document.getElementById('new-task-name').value.trim();
+    if (!taskName) return alert("名前を入れてね");
+    const response = await fetch('/tasks.json', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content },
+      body: JSON.stringify({ task: { title: taskName } })
+    });
+    if (response.ok) {
+      const newTask = await response.json();
+      taskSelect.add(new Option(newTask.title, newTask.id));
+      taskSelect.value = newTask.id;
+      document.getElementById('new-task-name').value = "";
+    } else { alert("失敗！"); }
+  });
+
+  document.getElementById('delete-task-btn').addEventListener('click', async () => {
+    const taskId = taskSelect.value;
+    if (!taskId || !confirm("消すよ？")) return;
+    const response = await fetch(`/tasks/${taskId}.json`, {
+      method: 'DELETE',
+      headers: { 'Accept': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content }
+    });
+    if (response.ok) {
+      taskSelect.remove(taskSelect.selectedIndex);
+      taskSelect.value = "";
+    }
+  });
+
+  // --- 休憩 ---
+  document.getElementById('confirm-break-btn').addEventListener('click', () => {
+    clearInterval(timerInterval);
+    let breakSec = parseInt(document.getElementById('break-minutes-input').value) * 60;
+    document.getElementById('break-setup').style.display = 'none';
+    document.getElementById('stop-break-btn').style.display = 'inline-block';
+    timerInterval = setInterval(() => {
+      breakSec--;
+      updateDisplay(display, breakSec);
+      if (breakSec <= 0) document.getElementById('stop-break-btn').click();
+    }, 1000);
+  });
+
+  document.getElementById('stop-break-btn').addEventListener('click', () => {
+    clearInterval(timerInterval);
+    document.getElementById('stop-break-btn').style.display = 'none';
+    document.getElementById('break-setup').style.display = 'block';
+    display.textContent = "00:00:00";
+    startBtn.style.display = 'inline-block';
+    pauseBtn.style.display = 'none';
+  });
+});
+</script>

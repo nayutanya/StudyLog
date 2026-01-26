@@ -4,7 +4,7 @@ class CreateStudyLogs < ActiveRecord::Migration[8.1]
       t.references :task, null: false, foreign_key: true
       t.datetime :started_at
       t.datetime :ended_at
-      t.integer :total_time
+      t.integer :duration
 
       t.timestamps
     end

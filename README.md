@@ -1,24 +1,12 @@
-# README
+# StudyLog
+学習習慣を可視化し、モチベーションを維持するために開発したパーソナルツールです。
+必要最低限の機能を自作することで、学習の仕組み化を図っています。
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+## 主な機能
+- 学習時間の計測と記録
+- カテゴリ別の学習量可視化
 
-Things you may want to cover:
-
-* Ruby version
-
-* System dependencies
-
-* Configuration
-
-* Database creation
-
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
+## 使用技術
+- Ruby on Rails
+- HTML / CSS / JavaScript
+- Docker
